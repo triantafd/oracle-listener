@@ -14,7 +14,13 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "pub": "npm run build && npm version patch && npm publish"
+  },
+  "author": "triantdc",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/triantafd/oracle-listener.git"
   },
   "dependencies": {
     "viem": "^2.0.0"
