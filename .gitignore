@@ -2,6 +2,7 @@ node_modules/
 dist/
 
 # test-server runtime state (not part of the library)
+test-server/
 test-server/node_modules/
 test-server/last-block.json
 test-server/test-state.json
