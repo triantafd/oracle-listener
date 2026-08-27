@@ -27,8 +27,17 @@
   },
   "devDependencies": {
     "@types/node": "^26.3.0",
+    "mongodb": "^7.6.0",
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "mongodb": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "mongodb": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18"

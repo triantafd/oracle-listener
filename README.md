@@ -101,33 +101,47 @@ The library uses a `BlockStore` to persist the last processed block. Two built-i
 |---|---|---|---|
 | `InMemoryStore` | default | None — resets on restart | Dev/testing |
 | `FileStore` | `oracle-listener` | JSON file on disk | Production, no external deps |
+| `MongoStore` | `oracle-listener` | MongoDB collection | Production, existing Mongo setup |
+
+### MongoDB store
+
+`MongoStore` is built in — pass it a MongoDB `Collection` from your existing connection:
+
+```typescript
+import { OracleListener, MongoStore } from 'oracle-listener';
+import { MongoClient } from 'mongodb';
+
+const client = new MongoClient(process.env.MONGODB_URI ?? 'mongodb://localhost:27017');
+await client.connect();
+const collection = client.db('myapp').collection('oracle_state');
+
+const listener = new OracleListener({
+  // ...
+  store: new MongoStore(collection),
+  // optional: custom document key (default: 'lastBlock')
+  // store: new MongoStore(collection, 'myListenerBlock'),
+});
+```
+
+Requires `mongodb` >= 4.0.0 as a peer dependency (`npm install mongodb`).
 
 ### Bring your own store
 
-Implement the `BlockStore` interface to plug in MongoDB, Redis, or anything else:
+Implement the `BlockStore` interface to plug in any other storage:
 
 ```typescript
 import type { BlockStore } from 'oracle-listener';
 
-class MongoStore implements BlockStore {
+class RedisStore implements BlockStore {
   async getLastBlock(): Promise<bigint | null> {
-    const doc = await db.collection('state').findOne({ _id: 'lastBlock' });
-    return doc ? BigInt(doc.value) : null;
+    const val = await redis.get('lastBlock');
+    return val ? BigInt(val) : null;
   }
 
   async setLastBlock(block: bigint): Promise<void> {
-    await db.collection('state').updateOne(
-      { _id: 'lastBlock' },
-      { $set: { value: block.toString() } },
-      { upsert: true },
-    );
+    await redis.set('lastBlock', block.toString());
   }
 }
-
-const listener = new OracleListener({
-  // ...
-  store: new MongoStore(),
-});
 ```
 
 ## Stop the listener

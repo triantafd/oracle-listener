@@ -34,7 +34,7 @@
 
 ## v2 ideas (after v1 is solid)
 - [x] Auto-reconnect with exponential backoff on RPC failure
-- [ ] MongoDB store adapter
+- [x] MongoDB store adapter
 - [ ] Redis store adapter
 - [x] HTTP status server (`GET /stats`)
 - [ ] Multi-event support (listen to multiple events on one contract)
