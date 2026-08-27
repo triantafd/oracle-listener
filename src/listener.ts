@@ -4,8 +4,11 @@ import type { OracleListenerConfig } from './types.js';
 
 export class OracleListener {
   private readonly poller: Poller;
+  private readonly config: OracleListenerConfig;
+  private startedAt: number | null = null;
 
   constructor(config: OracleListenerConfig) {
+    this.config = config;
     const store = config.store ?? new InMemoryStore();
     const onError = config.onError ?? ((err) => console.error('[oracle-listener]', err));
 
@@ -21,14 +24,33 @@ export class OracleListener {
       store,
       onEvent: config.onEvent,
       onError,
+      reconnect: config.reconnect ?? true,
+      reconnectInitialDelay: config.reconnectInitialDelay ?? 1000,
+      reconnectMaxDelay: config.reconnectMaxDelay ?? 60000,
+      reconnectMaxAttempts: config.reconnectMaxAttempts ?? 0,
+      onReconnect: config.onReconnect,
     });
   }
 
   async start(): Promise<void> {
+    this.startedAt = Date.now();
     await this.poller.start();
   }
 
   stop(): void {
     this.poller.stop();
+  }
+
+  getStats() {
+    const { lastProcessedBlock, failureCount, stopped } = this.poller.getStats();
+    return {
+      status: stopped ? 'stopped' : failureCount > 0 ? 'reconnecting' : 'running',
+      lastProcessedBlock,
+      failureCount,
+      rpcUrl: this.config.rpcUrl,
+      contractAddress: this.config.contractAddress,
+      eventName: this.config.eventName,
+      uptime: this.startedAt !== null ? Math.floor((Date.now() - this.startedAt) / 1000) : 0,
+    };
   }
 }

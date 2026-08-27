@@ -28,14 +28,14 @@
 - [x] Test FileStore persistence: stop server, emit event, restart, verify catch-up
 
 ## Before publishing to npm
-- [ ] Write README.md
-- [ ] Add .gitignore
-- [ ] `git init` and make first commit
+- [x] Write README.md
+- [x] Add .gitignore
+- [x] `git init` and make first commit
 
 ## v2 ideas (after v1 is solid)
-- [ ] Auto-reconnect with exponential backoff on RPC failure
-- [ ] MongoDB store adapter
+- [x] Auto-reconnect with exponential backoff on RPC failure
+- [x] MongoDB store adapter
 - [ ] Redis store adapter
-- [ ] HTTP status server (`GET /stats`)
-- [ ] Multi-event support (listen to multiple events on one contract)
-- [ ] Write-back signer helper
+- [x] HTTP status server (`GET /stats`)
+- [x] Multi-event support (listen to multiple events on one contract)
+- [x] Write-back signer helper — removed, belongs in consumer code

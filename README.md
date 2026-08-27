@@ -59,7 +59,7 @@ const listener = new OracleListener({
   rpcUrl: 'http://localhost:8545',       // RPC endpoint (HTTP or WS)
   contractAddress: '0xABC...',           // contract to watch
   abi: [...],                            // full contract ABI
-  eventName: 'OracleRequested',         // event name to filter
+  eventName: 'OracleRequested',         // one event, or array for multiple
   onEvent: async (event) => { ... },    // called for every new event
 
   // optional
@@ -69,6 +69,13 @@ const listener = new OracleListener({
   batchSize: 1000,           // max blocks to fetch per poll (default: 1000)
   store: new FileStore(...), // where to save progress (default: InMemoryStore)
   onError: (err) => { ... }, // called on RPC errors (default: console.error)
+
+  // reconnect (all optional)
+  reconnect: true,                // auto-reconnect on RPC failure (default: true)
+  reconnectInitialDelay: 1000,    // first retry delay in ms (default: 1000)
+  reconnectMaxDelay: 60000,       // max retry delay in ms (default: 60000)
+  reconnectMaxAttempts: 0,        // max attempts, 0 = unlimited (default: 0)
+  onReconnect: () => { ... },     // called when RPC connection is restored
 });
 ```
 
@@ -94,32 +101,66 @@ The library uses a `BlockStore` to persist the last processed block. Two built-i
 |---|---|---|---|
 | `InMemoryStore` | default | None — resets on restart | Dev/testing |
 | `FileStore` | `oracle-listener` | JSON file on disk | Production, no external deps |
+| `MongoStore` | `oracle-listener` | MongoDB collection | Production, existing Mongo setup |
+
+### MongoDB store
+
+`MongoStore` is built in — pass it a MongoDB `Collection` from your existing connection:
+
+```typescript
+import { OracleListener, MongoStore } from 'oracle-listener';
+import { MongoClient } from 'mongodb';
+
+const client = new MongoClient(process.env.MONGODB_URI ?? 'mongodb://localhost:27017');
+await client.connect();
+const collection = client.db('myapp').collection('oracle_state');
+
+const listener = new OracleListener({
+  // ...
+  store: new MongoStore(collection),
+  // optional: custom document key (default: 'lastBlock')
+  // store: new MongoStore(collection, 'myListenerBlock'),
+});
+```
+
+Requires `mongodb` >= 4.0.0 as a peer dependency (`npm install mongodb`).
 
 ### Bring your own store
 
-Implement the `BlockStore` interface to plug in MongoDB, Redis, or anything else:
+Implement the `BlockStore` interface to plug in any other storage:
 
 ```typescript
 import type { BlockStore } from 'oracle-listener';
 
-class MongoStore implements BlockStore {
+class RedisStore implements BlockStore {
   async getLastBlock(): Promise<bigint | null> {
-    const doc = await db.collection('state').findOne({ _id: 'lastBlock' });
-    return doc ? BigInt(doc.value) : null;
+    const val = await redis.get('lastBlock');
+    return val ? BigInt(val) : null;
   }
 
   async setLastBlock(block: bigint): Promise<void> {
-    await db.collection('state').updateOne(
-      { _id: 'lastBlock' },
-      { $set: { value: block.toString() } },
-      { upsert: true },
-    );
+    await redis.set('lastBlock', block.toString());
   }
 }
+```
 
+## Listening to multiple events
+
+Pass an array to `eventName` to listen for more than one event on the same contract in a single poll loop:
+
+```typescript
 const listener = new OracleListener({
-  // ...
-  store: new MongoStore(),
+  rpcUrl: 'http://localhost:8545',
+  contractAddress: '0xABC...',
+  abi: MyContractABI,
+  eventName: ['OracleRequested', 'OracleFulfilled'],
+  onEvent: async (event) => {
+    if (event.eventName === 'OracleRequested') {
+      // handle request
+    } else if (event.eventName === 'OracleFulfilled') {
+      // handle fulfillment
+    }
+  },
 });
 ```
 
@@ -131,6 +172,67 @@ await listener.start();
 // later, e.g. on SIGTERM
 listener.stop();
 ```
+
+## Stats
+
+Call `listener.getStats()` at any time to get the current state. Plug it into your existing server's health/status route:
+
+```typescript
+// Express example
+app.get('/oracle/stats', (req, res) => {
+  const stats = listener.getStats();
+  res.json({
+    ...stats,
+    lastProcessedBlock: stats.lastProcessedBlock?.toString(), // bigint → string
+  });
+});
+```
+
+Response shape:
+
+```json
+{
+  "status": "running",
+  "lastProcessedBlock": "31242",
+  "failureCount": 0,
+  "rpcUrl": "http://localhost:8545",
+  "contractAddress": "0xABC...",
+  "eventName": "OracleRequested",
+  "uptime": 42
+}
+```
+
+`status` is one of `"running"`, `"reconnecting"` (RPC is down, backoff active), or `"stopped"`.
+
+## Handling RPC failures
+
+By default the library reconnects automatically when the RPC goes down. On each failure it calls `onError`, then waits before retrying with exponential backoff:
+
+```
+failure 1 → retry in  1s
+failure 2 → retry in  2s
+failure 3 → retry in  4s
+failure 4 → retry in  8s
+failure 5 → retry in 16s
+failure 6 → retry in 32s
+failure 7+ → retry in 60s  (capped at reconnectMaxDelay)
+```
+
+When the RPC comes back, the library resumes from `lastProcessedBlock` — no events are missed.
+
+```typescript
+const listener = new OracleListener({
+  // ...
+  onError: (err) => {
+    console.error('RPC error:', err.message);
+  },
+  onReconnect: () => {
+    console.log('RPC restored, resuming...');
+  },
+});
+```
+
+To disable auto-reconnect and handle retries yourself, set `reconnect: false`.
 
 ## Requirements
 
