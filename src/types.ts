@@ -27,6 +27,16 @@ export interface OracleListenerConfig {
   onEvent: (event: OracleLog) => Promise<void>;
   /** Called on polling errors. Default: console.error */
   onError?: (err: unknown) => void;
+  /** Enable auto-reconnect with exponential backoff on RPC failure. Default: true */
+  reconnect?: boolean;
+  /** Initial delay before first reconnect attempt, in ms. Default: 1000 */
+  reconnectInitialDelay?: number;
+  /** Maximum delay between reconnect attempts, in ms. Default: 60000 */
+  reconnectMaxDelay?: number;
+  /** Maximum reconnect attempts before giving up (0 = unlimited). Default: 0 */
+  reconnectMaxAttempts?: number;
+  /** Called when RPC connection is restored after one or more failures */
+  onReconnect?: () => void;
 }
 
 export type { BlockStore, Log };

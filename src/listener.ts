@@ -21,6 +21,11 @@ export class OracleListener {
       store,
       onEvent: config.onEvent,
       onError,
+      reconnect: config.reconnect ?? true,
+      reconnectInitialDelay: config.reconnectInitialDelay ?? 1000,
+      reconnectMaxDelay: config.reconnectMaxDelay ?? 60000,
+      reconnectMaxAttempts: config.reconnectMaxAttempts ?? 0,
+      onReconnect: config.onReconnect,
     });
   }
 

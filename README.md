@@ -69,6 +69,13 @@ const listener = new OracleListener({
   batchSize: 1000,           // max blocks to fetch per poll (default: 1000)
   store: new FileStore(...), // where to save progress (default: InMemoryStore)
   onError: (err) => { ... }, // called on RPC errors (default: console.error)
+
+  // reconnect (all optional)
+  reconnect: true,                // auto-reconnect on RPC failure (default: true)
+  reconnectInitialDelay: 1000,    // first retry delay in ms (default: 1000)
+  reconnectMaxDelay: 60000,       // max retry delay in ms (default: 60000)
+  reconnectMaxAttempts: 0,        // max attempts, 0 = unlimited (default: 0)
+  onReconnect: () => { ... },     // called when RPC connection is restored
 });
 ```
 
@@ -131,6 +138,36 @@ await listener.start();
 // later, e.g. on SIGTERM
 listener.stop();
 ```
+
+## Handling RPC failures
+
+By default the library reconnects automatically when the RPC goes down. On each failure it calls `onError`, then waits before retrying with exponential backoff:
+
+```
+failure 1 → retry in  1s
+failure 2 → retry in  2s
+failure 3 → retry in  4s
+failure 4 → retry in  8s
+failure 5 → retry in 16s
+failure 6 → retry in 32s
+failure 7+ → retry in 60s  (capped at reconnectMaxDelay)
+```
+
+When the RPC comes back, the library resumes from `lastProcessedBlock` — no events are missed.
+
+```typescript
+const listener = new OracleListener({
+  // ...
+  onError: (err) => {
+    console.error('RPC error:', err.message);
+  },
+  onReconnect: () => {
+    console.log('RPC restored, resuming...');
+  },
+});
+```
+
+To disable auto-reconnect and handle retries yourself, set `reconnect: false`.
 
 ## Requirements
 

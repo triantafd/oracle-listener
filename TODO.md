@@ -33,7 +33,7 @@
 - [ ] `git init` and make first commit
 
 ## v2 ideas (after v1 is solid)
-- [ ] Auto-reconnect with exponential backoff on RPC failure
+- [x] Auto-reconnect with exponential backoff on RPC failure
 - [ ] MongoDB store adapter
 - [ ] Redis store adapter
 - [ ] HTTP status server (`GET /stats`)
