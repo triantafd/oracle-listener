@@ -59,7 +59,7 @@ const listener = new OracleListener({
   rpcUrl: 'http://localhost:8545',       // RPC endpoint (HTTP or WS)
   contractAddress: '0xABC...',           // contract to watch
   abi: [...],                            // full contract ABI
-  eventName: 'OracleRequested',         // event name to filter
+  eventName: 'OracleRequested',         // one event, or array for multiple
   onEvent: async (event) => { ... },    // called for every new event
 
   // optional
@@ -142,6 +142,26 @@ class RedisStore implements BlockStore {
     await redis.set('lastBlock', block.toString());
   }
 }
+```
+
+## Listening to multiple events
+
+Pass an array to `eventName` to listen for more than one event on the same contract in a single poll loop:
+
+```typescript
+const listener = new OracleListener({
+  rpcUrl: 'http://localhost:8545',
+  contractAddress: '0xABC...',
+  abi: MyContractABI,
+  eventName: ['OracleRequested', 'OracleFulfilled'],
+  onEvent: async (event) => {
+    if (event.eventName === 'OracleRequested') {
+      // handle request
+    } else if (event.eventName === 'OracleFulfilled') {
+      // handle fulfillment
+    }
+  },
+});
 ```
 
 ## Stop the listener

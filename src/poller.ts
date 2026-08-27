@@ -8,7 +8,7 @@ interface PollerOptions {
   rpcUrl: string;
   contractAddress: `0x${string}`;
   abi: Abi;
-  eventName: string;
+  eventName: string | string[];
   pollInterval: number;
   confirmationBlocks: number;
   startBlock: bigint | 'latest';
@@ -26,7 +26,7 @@ interface PollerOptions {
 export class Poller {
   private readonly client;
   private readonly dedup = new DedupTracker();
-  private readonly abiEvent: AbiEvent;
+  private readonly abiEvents: AbiEvent[];
   private lastProcessedBlock: bigint | null = null;
   private isProcessing = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -35,7 +35,7 @@ export class Poller {
 
   constructor(private readonly opts: PollerOptions) {
     this.client = createPublicClient({ transport: http(opts.rpcUrl) });
-    this.abiEvent = this.findAbiEvent();
+    this.abiEvents = this.findAbiEvents();
   }
 
   async start(): Promise<void> {
@@ -89,7 +89,9 @@ export class Poller {
 
           const logs = await this.client.getLogs({
             address: this.opts.contractAddress,
-            event: this.abiEvent,
+            ...(this.abiEvents.length === 1
+              ? { event: this.abiEvents[0] }
+              : { events: this.abiEvents }),
             fromBlock: batchFrom,
             toBlock,
           });
@@ -147,14 +149,18 @@ export class Poller {
     };
   }
 
-  private findAbiEvent(): AbiEvent {
-    const found = this.opts.abi.find(
-      (item): item is AbiEvent =>
-        item.type === 'event' && 'name' in item && item.name === this.opts.eventName,
-    );
-    if (!found) {
-      throw new Error(`Event "${this.opts.eventName}" not found in ABI`);
-    }
-    return found;
+  private findAbiEvents(): AbiEvent[] {
+    const names = Array.isArray(this.opts.eventName)
+      ? this.opts.eventName
+      : [this.opts.eventName];
+
+    return names.map((name) => {
+      const found = this.opts.abi.find(
+        (item): item is AbiEvent =>
+          item.type === 'event' && 'name' in item && item.name === name,
+      );
+      if (!found) throw new Error(`Event "${name}" not found in ABI`);
+      return found;
+    });
   }
 }
