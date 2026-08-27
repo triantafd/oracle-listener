@@ -139,6 +139,37 @@ await listener.start();
 listener.stop();
 ```
 
+## Stats
+
+Call `listener.getStats()` at any time to get the current state. Plug it into your existing server's health/status route:
+
+```typescript
+// Express example
+app.get('/oracle/stats', (req, res) => {
+  const stats = listener.getStats();
+  res.json({
+    ...stats,
+    lastProcessedBlock: stats.lastProcessedBlock?.toString(), // bigint → string
+  });
+});
+```
+
+Response shape:
+
+```json
+{
+  "status": "running",
+  "lastProcessedBlock": "31242",
+  "failureCount": 0,
+  "rpcUrl": "http://localhost:8545",
+  "contractAddress": "0xABC...",
+  "eventName": "OracleRequested",
+  "uptime": 42
+}
+```
+
+`status` is one of `"running"`, `"reconnecting"` (RPC is down, backoff active), or `"stopped"`.
+
 ## Handling RPC failures
 
 By default the library reconnects automatically when the RPC goes down. On each failure it calls `onError`, then waits before retrying with exponential backoff:

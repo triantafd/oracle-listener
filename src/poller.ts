@@ -139,6 +139,14 @@ export class Poller {
     }
   }
 
+  getStats() {
+    return {
+      lastProcessedBlock: this.lastProcessedBlock,
+      failureCount: this.failureCount,
+      stopped: this.stopped,
+    };
+  }
+
   private findAbiEvent(): AbiEvent {
     const found = this.opts.abi.find(
       (item): item is AbiEvent =>

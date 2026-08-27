@@ -36,6 +36,6 @@
 - [x] Auto-reconnect with exponential backoff on RPC failure
 - [ ] MongoDB store adapter
 - [ ] Redis store adapter
-- [ ] HTTP status server (`GET /stats`)
+- [x] HTTP status server (`GET /stats`)
 - [ ] Multi-event support (listen to multiple events on one contract)
 - [ ] Write-back signer helper
