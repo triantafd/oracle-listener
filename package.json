@@ -1,6 +1,6 @@
 {
   "name": "oracle-listener",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Config-driven EVM oracle event listener library",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
